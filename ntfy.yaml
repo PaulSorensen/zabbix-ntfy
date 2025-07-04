@@ -1,0 +1,201 @@
+zabbix_export:
+  version: '7.2'
+  media_types:
+    - name: ntfy
+      type: WEBHOOK
+      parameters:
+        - name: HTTPProxy
+        - name: Message
+          value: '{ALERT.MESSAGE}'
+        - name: Password
+        - name: Severity
+          value: '{EVENT.SEVERITY}'
+        - name: Subject
+          value: '{ALERT.SUBJECT}'
+        - name: To
+          value: '{ALERT.SENDTO}'
+        - name: Token
+        - name: URL
+          value: 'https://ntfy.sh'
+        - name: Username
+      script: |
+        ////////////////////////////////////////////////////////////////////////////////
+        // Script Name   : Zabbix ntfy
+        // Author        : Paul Sørensen
+        // Website       : https://paulsorensen.io
+        // GitHub        : https://github.com/paulsorensen
+        // Version       : 1.0
+        // Last Modified : 2025/07/05 01:06:17
+        //
+        // Description:
+        // Sends Zabbix notifications to a custom ntfy topic.
+        // Maps {EVENT.SEVERITY} to ntfy priority, applies emoji tags,
+        // supports authentication, and HTTP Proxy.
+        //
+        // Usage: Refer to README.md for details on usage and configuration.
+        //
+        // If you found this script useful, a small tip is appreciated ❤️
+        // https://buymeacoffee.com/paulsorensen
+        ////////////////////////////////////////////////////////////////////////////////
+        try {
+            var params = JSON.parse(value);
+        
+            if (!params.URL || !params.To) {
+                throw 'Missing required ntfy URL or topic';
+            }
+        
+            var subject = params.Subject || 'Zabbix Alert';
+            var message = params.Message || 'No message content';
+        
+            // Map Zabbix {EVENT.SEVERITY} to ntfy priority (1–5) and emoji tags
+            var severityMap = {
+                'Not classified': { priority: '1', emoji: 'grey_question' },
+                'Information': { priority: '2', emoji: 'grey_exclamation' },
+                'Warning': { priority: '3', emoji: 'warning' },
+                'Average': { priority: '3', emoji: 'exclamation' },
+                'High': { priority: '4', emoji: 'bangbang' },
+                'Disaster': { priority: '5', emoji: 'rotating_light' }
+            };
+        
+            var severityData = severityMap[params.Severity] || { priority: '3', emoji: 'warning' };
+            var priority = severityData.priority;
+            var emojiTag = severityData.emoji;
+        
+            // Override emoji to checkmark if message contains "resolved" (case insensitive)
+            if (message.toLowerCase().indexOf('resolved') !== -1) {
+                emojiTag = 'white_check_mark';
+            }    
+        
+            var url = params.URL.replace(/\/+$/, '') + '/' + encodeURIComponent(params.To) + '?priority=' + priority + '&tags=' + emojiTag;
+        
+            var req = new HttpRequest();
+            req.addHeader('Title', subject);
+            req.addHeader('User-Agent', 'Zabbix/ntfy');
+        
+            if (typeof params.HTTPProxy === 'string' && params.HTTPProxy.trim() !== '') {
+                req.setProxy(params.HTTPProxy);
+            }
+        
+            // Auth support (Bearer or Basic)
+            if (params.Token) {
+                req.addHeader('Authorization', 'Bearer ' + params.Token);
+            } else if (params.Username && params.Password) {
+                req.setHttpAuth(HTTPAUTH_BASIC, params.Username, params.Password);
+            }
+        
+            var response = req.post(url, subject + "\n" + message);
+        
+            if (req.getStatus() !== 200) {
+                throw 'HTTP ' + req.getStatus() + ': ' + response;
+            }
+            return "Notification sent successfully";
+            
+        } catch (error) {
+            throw 'Sending failed: ' + error;
+        }
+      description: |
+        Sends Zabbix notifications to a custom ntfy.sh topic.
+        Performs priority mapping from {EVENT.SEVERITY}, applies emoji tags, and supports authentication.
+        
+        Set 'Send to' in user meda to ntfy topic.
+        If using auth, fill out 'Token' or 'Username' and 'Password' here.
+      message_templates:
+        - event_source: TRIGGERS
+          operation_mode: PROBLEM
+          subject: 'Problem: {EVENT.NAME}'
+          message: |
+            Problem started at {EVENT.TIME} on {EVENT.DATE}
+            Problem name: {EVENT.NAME}
+            Host: {HOST.NAME}
+            Severity: {EVENT.SEVERITY}
+            Operational data: {EVENT.OPDATA}
+            Original problem ID: {EVENT.ID}
+            {TRIGGER.URL}
+        - event_source: TRIGGERS
+          operation_mode: RECOVERY
+          subject: 'Resolved in {EVENT.DURATION}: {EVENT.NAME}'
+          message: |
+            Problem has been resolved at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}
+            Problem name: {EVENT.NAME}
+            Problem duration: {EVENT.DURATION}
+            Host: {HOST.NAME}
+            Severity: {EVENT.SEVERITY}
+            Original problem ID: {EVENT.ID}
+            {TRIGGER.URL}
+        - event_source: TRIGGERS
+          operation_mode: UPDATE
+          subject: 'Updated problem in {EVENT.AGE}: {EVENT.NAME}'
+          message: |
+            {USER.FULLNAME} {EVENT.UPDATE.ACTION} problem at {EVENT.UPDATE.DATE} {EVENT.UPDATE.TIME}.
+            {EVENT.UPDATE.MESSAGE}
+            
+            Current problem status is {EVENT.STATUS}, age is {EVENT.AGE}, acknowledged: {EVENT.ACK.STATUS}.
+        - event_source: DISCOVERY
+          operation_mode: PROBLEM
+          subject: 'Discovery: {DISCOVERY.DEVICE.STATUS} {DISCOVERY.DEVICE.IPADDRESS}'
+          message: |
+            Discovery rule: {DISCOVERY.RULE.NAME}
+            
+            Device IP: {DISCOVERY.DEVICE.IPADDRESS}
+            Device DNS: {DISCOVERY.DEVICE.DNS}
+            Device status: {DISCOVERY.DEVICE.STATUS}
+            Device uptime: {DISCOVERY.DEVICE.UPTIME}
+            
+            Device service name: {DISCOVERY.SERVICE.NAME}
+            Device service port: {DISCOVERY.SERVICE.PORT}
+            Device service status: {DISCOVERY.SERVICE.STATUS}
+            Device service uptime: {DISCOVERY.SERVICE.UPTIME}
+        - event_source: AUTOREGISTRATION
+          operation_mode: PROBLEM
+          subject: 'Autoregistration: {HOST.HOST}'
+          message: |
+            Host name: {HOST.HOST}
+            Host IP: {HOST.IP}
+            Agent port: {HOST.PORT}
+        - event_source: INTERNAL
+          operation_mode: PROBLEM
+          subject: '[{EVENT.STATUS}] {EVENT.NAME}'
+          message: |
+            Problem started at {EVENT.TIME} on {EVENT.DATE}
+            Problem name: {EVENT.NAME}
+            Host: {HOST.NAME}
+            Original problem ID: {EVENT.ID}
+        - event_source: INTERNAL
+          operation_mode: RECOVERY
+          subject: '[{EVENT.STATUS}] {EVENT.NAME}'
+          message: |
+            Problem has been resolved in {EVENT.DURATION} at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}
+            Problem name: {EVENT.NAME}
+            Host: {HOST.NAME}
+            Original problem ID: {EVENT.ID}
+        - event_source: SERVICE
+          operation_mode: PROBLEM
+          subject: 'Service "{SERVICE.NAME}" problem: {EVENT.NAME}'
+          message: |
+            Service problem started at {EVENT.TIME} on {EVENT.DATE}
+            Service problem name: {EVENT.NAME}
+            Service: {SERVICE.NAME}
+            Severity: {EVENT.SEVERITY}
+            Original problem ID: {EVENT.ID}
+            Service description: {SERVICE.DESCRIPTION}
+            
+            {SERVICE.ROOTCAUSE}
+        - event_source: SERVICE
+          operation_mode: RECOVERY
+          subject: 'Service "{SERVICE.NAME}" resolved in {EVENT.DURATION}: {EVENT.NAME}'
+          message: |
+            Service "{SERVICE.NAME}" has been resolved at {EVENT.RECOVERY.TIME} on {EVENT.RECOVERY.DATE}
+            Problem name: {EVENT.NAME}
+            Problem duration: {EVENT.DURATION}
+            Severity: {EVENT.SEVERITY}
+            Original problem ID: {EVENT.ID}
+            Service description: {SERVICE.DESCRIPTION}
+        - event_source: SERVICE
+          operation_mode: UPDATE
+          subject: 'Changed "{SERVICE.NAME}" service status to {EVENT.UPDATE.SEVERITY} in {EVENT.AGE}'
+          message: |
+            Changed "{SERVICE.NAME}" service status to {EVENT.UPDATE.SEVERITY} at {EVENT.UPDATE.DATE} {EVENT.UPDATE.TIME}.
+            Current problem age is {EVENT.AGE}.
+            Service description: {SERVICE.DESCRIPTION}
+            
+            {SERVICE.ROOTCAUSE}
