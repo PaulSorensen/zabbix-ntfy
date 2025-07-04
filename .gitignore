@@ -1,0 +1,68 @@
+# paulsorensen.io .gitignore
+# Last Modified : 2025/07/04 21:59:39
+
+# ─── PROJECT-SPECIFIC ───────────────────────────────────
+
+# ─── SENSITIVE-CONFIG ───────────────────────────────────
+.dev/
+
+# ─── TEMPORARY FILES ────────────────────────────────────
+*~
+*.tmp
+*.swp
+*.bak
+.*.swp
+.*.swo
+
+# ─── LOG FILES ──────────────────────────────────────────
+*.log
+
+# ─── OS-SPECIFIC FILES ──────────────────────────────────
+# Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# macOS
+._*
+.DS_Store
+.LSOverride
+
+# Windows
+[Dd]esktop.ini
+ehthumbs.db
+ehthumbs_vista.db
+[Tt]humbs.db
+
+# ─── PYTHON ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ─── GO ─────────────────────────────────────────────────
+*.test
+*.out
+*.exe
+
+# Go modules and cache
+vendor/
+bin/
+pkg/
+
+# ─── RUST ───────────────────────────────────────────────
+/target/
+/Cargo.lock
+
+# ─── DOTNET / C# ────────────────────────────────────────
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ─── IDE / TOOLING ──────────────────────────────────────
+.idea/
+.vscode/
+*.code-workspace
