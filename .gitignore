@@ -1,10 +1,11 @@
 # paulsorensen.io .gitignore
-# Last Modified : 2025/07/04 21:59:39
+# Last Modified : 2025/07/05 02:35:18
 
 # ─── PROJECT-SPECIFIC ───────────────────────────────────
+.dev/
 
 # ─── SENSITIVE-CONFIG ───────────────────────────────────
-.dev/
+.env
 
 # ─── TEMPORARY FILES ────────────────────────────────────
 *~
