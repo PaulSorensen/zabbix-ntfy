@@ -24,8 +24,8 @@ zabbix_export:
         // Author        : Paul Sørensen
         // Website       : https://paulsorensen.io
         // GitHub        : https://github.com/paulsorensen
-        // Version       : 1.0
-        // Last Modified : 2025/07/05 01:06:17
+        // Version       : 1.1
+        // Last Modified : 2025/07/05 04:41:54
         //
         // Description:
         // Sends Zabbix notifications to a custom ntfy topic.
@@ -69,8 +69,8 @@ zabbix_export:
             var url = params.URL.replace(/\/+$/, '') + '/' + encodeURIComponent(params.To) + '?priority=' + priority + '&tags=' + emojiTag;
         
             var req = new HttpRequest();
-            req.addHeader('Title', subject);
-            req.addHeader('User-Agent', 'Zabbix/ntfy');
+            req.addHeader('Title: ' + subject);
+            req.addHeader('User-Agent: Zabbix/ntfy');
         
             if (typeof params.HTTPProxy === 'string' && params.HTTPProxy.trim() !== '') {
                 req.setProxy(params.HTTPProxy);
@@ -78,12 +78,13 @@ zabbix_export:
         
             // Auth support (Bearer or Basic)
             if (params.Token) {
-                req.addHeader('Authorization', 'Bearer ' + params.Token);
+                req.addHeader('Authorization: Bearer ' + params.Token);
             } else if (params.Username && params.Password) {
                 req.setHttpAuth(HTTPAUTH_BASIC, params.Username, params.Password);
             }
         
-            var response = req.post(url, subject + "\n" + message);
+        
+            var response = req.post(url, message);
         
             if (req.getStatus() !== 200) {
                 throw 'HTTP ' + req.getStatus() + ': ' + response;
