@@ -25,7 +25,7 @@ zabbix_export:
         // Website       : https://paulsorensen.io
         // GitHub        : https://github.com/paulsorensen
         // Version       : 1.1
-        // Last Modified : 2025/07/05 04:41:54
+        // Last Modified : 2025/07/05 04:43:27
         //
         // Description:
         // Sends Zabbix notifications to a custom ntfy topic.
@@ -66,11 +66,14 @@ zabbix_export:
                 emojiTag = 'white_check_mark';
             }    
         
-            var url = params.URL.replace(/\/+$/, '') + '/' + encodeURIComponent(params.To) + '?priority=' + priority + '&tags=' + emojiTag;
+            var url = params.URL.replace(/\/+$/, '') + '/' + encodeURIComponent(params.To);
         
             var req = new HttpRequest();
+            req.addHeader('Content-Type: text/plain');
             req.addHeader('Title: ' + subject);
             req.addHeader('User-Agent: Zabbix/ntfy');
+            req.addHeader('Priority: ' + priority);
+            req.addHeader('Tags: ' + emojiTag);
         
             if (typeof params.HTTPProxy === 'string' && params.HTTPProxy.trim() !== '') {
                 req.setProxy(params.HTTPProxy);
